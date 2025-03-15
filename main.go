@@ -8,6 +8,7 @@ import (
 	"github.com/zanroo/geziyor/export"
 	"log"
 	url2 "net/url"
+	"strings"
 )
 
 func main() {
@@ -28,17 +29,30 @@ func main() {
 }
 
 func vacanciesParse(g *geziyor.Geziyor, r *client.Response) {
-	r.HTMLDoc.Find(".bloko-header-section-2").Each(func(i int, s *goquery.Selection) {
-		s.Find("span").Each(func(j int, span *goquery.Selection) {
-			spanText := span.Text()
-			if spanText != "" {
+
+	r.HTMLDoc.Find(".wide-container--ZEcmUvt6oNs8OvdB").
+		Find(".compensation-labels--vwum2s12fQUurc2J.compensation-labels_magritte--pbBIkJ7Ww24ZILKz").
+		Find(".magritte-text___pbpft_3-0-29.magritte-text_style-primary___AQ7MW_3-0-29.magritte-text_typography-label-1-regular___pi3R-_3-0-29").
+		Each(func(i int, s *goquery.Selection) {
+			spanText := s.Text()
+
+			cleanText := cleanString(spanText)
+
+			if cleanText != "" && strings.Contains(cleanText, "₽") {
+				if index := strings.Index(cleanText, "₽"); index != -1 {
+					cleanText = strings.TrimSpace(cleanText[:index]) + " " + "₽"
+				}
 				g.Exports <- map[string]interface{}{
-					"name": spanText,
+					"salary": cleanText,
 				}
 			}
+
 		})
-		//if href, ok := r.HTMLDoc.Find("li.next > a").Attr("href"); ok {
-		//	g.Get(r.JoinURL(href), vacanciesParse)
-		//}
-	})
+}
+
+func cleanString(input string) string {
+	replacer := strings.NewReplacer("\u200B", "", "\u202F", "", "\u00A0", "")
+	input = replacer.Replace(input)
+
+	return input
 }
