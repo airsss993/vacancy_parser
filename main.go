@@ -7,15 +7,18 @@ import (
 	"github.com/zanroo/geziyor/client"
 	"github.com/zanroo/geziyor/export"
 	"log"
+	url2 "net/url"
 )
 
 func main() {
 	var vacancyName string
+	fmt.Print("Введите название вакансии: ")
 	if _, err := fmt.Scan(&vacancyName); err != nil {
 		log.Println(err)
+		return
 	}
 
-	url := fmt.Sprintf("https://ekaterinburg.hh.ru/search/vacancy?text=%v&area=3&hhtmFrom=main&hhtmFromLabel=vacancy_search_line", vacancyName)
+	url := fmt.Sprintf("https://ekaterinburg.hh.ru/search/vacancy?text=%s", url2.QueryEscape(vacancyName))
 
 	geziyor.NewGeziyor(&geziyor.Options{
 		StartURLs: []string{url},
@@ -25,13 +28,17 @@ func main() {
 }
 
 func vacanciesParse(g *geziyor.Geziyor, r *client.Response) {
-	r.HTMLDoc.Find("div.quote").Each(func(i int, s *goquery.Selection) {
-		g.Exports <- map[string]interface{}{
-			"text":   s.Find("span.text").Text(),
-			"author": s.Find("small.author").Text(),
-		}
+	r.HTMLDoc.Find(".bloko-header-section-2").Each(func(i int, s *goquery.Selection) {
+		s.Find("span").Each(func(j int, span *goquery.Selection) {
+			spanText := span.Text()
+			if spanText != "" {
+				g.Exports <- map[string]interface{}{
+					"name": spanText,
+				}
+			}
+		})
+		//if href, ok := r.HTMLDoc.Find("li.next > a").Attr("href"); ok {
+		//	g.Get(r.JoinURL(href), vacanciesParse)
+		//}
 	})
-	if href, ok := r.HTMLDoc.Find("li.next > a").Attr("href"); ok {
-		g.Get(r.JoinURL(href), vacanciesParse)
-	}
 }
