@@ -29,25 +29,29 @@ func main() {
 }
 
 func vacanciesParse(g *geziyor.Geziyor, r *client.Response) {
+	r.HTMLDoc.Find(".vacancy-info--ieHKDTkezpEj0Gsx").Each(func(i int, s *goquery.Selection) {
+		title := s.Find(".bloko-header-section-2").Find("div").Text()
+		salary := s.Find(".magritte-text___pbpft_3-0-29.magritte-text_style-primary___AQ7MW_3-0-29.magritte-text_typography-label-1-regular___pi3R-_3-0-29").Text()
 
-	r.HTMLDoc.Find(".wide-container--ZEcmUvt6oNs8OvdB").
-		Find(".compensation-labels--vwum2s12fQUurc2J.compensation-labels_magritte--pbBIkJ7Ww24ZILKz").
-		Find(".magritte-text___pbpft_3-0-29.magritte-text_style-primary___AQ7MW_3-0-29.magritte-text_typography-label-1-regular___pi3R-_3-0-29").
-		Each(func(i int, s *goquery.Selection) {
-			spanText := s.Text()
+		title = cleanString(title)
+		salary = cleanString(salary)
 
-			cleanText := cleanString(spanText)
-
-			if cleanText != "" && strings.Contains(cleanText, "₽") {
-				if index := strings.Index(cleanText, "₽"); index != -1 {
-					cleanText = strings.TrimSpace(cleanText[:index]) + " " + "₽"
-				}
-				g.Exports <- map[string]interface{}{
-					"salary": cleanText,
-				}
+		if title != "" {
+			vacancies := map[string]interface{}{
+				"Название": title,
+				"Зарплата": "Не указана",
 			}
 
-		})
+			if strings.Contains(salary, "₽") {
+				if index := strings.Index(salary, "₽"); index != -1 {
+					salary = strings.TrimSpace(salary[:index]) + " " + "₽"
+				}
+				vacancies["Зарплата"] = salary
+			}
+
+			g.Exports <- vacancies
+		}
+	})
 }
 
 func cleanString(input string) string {
